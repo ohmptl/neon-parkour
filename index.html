@@ -15,16 +15,30 @@
                 <div class="score">Score: <span id="score">0</span></div>
             </div>
             
-            <div class="instructions" id="instructions">
+            <div class="name-entry" id="nameEntry" style="display: none;">
                 <h2>🏃‍♂️ NEON PARKOUR</h2>
-                <p><strong>CONTROLS:</strong></p>
-                <p>🏃 A/D or ←/→ - Move left/right</p>
-                <p>🦘 W or ↑ - Jump</p>
-                <p>🧗 Hold W near wall - Wall grab</p>
-                <p>🚀 S or ↓ - Slide (while running)</p>
-                <p>💨 Double-tap direction - Dash</p>
-                <br>
-                <p>Reach the glowing exit portal to complete each level!</p>
+                <p>Enter your name for the leaderboard:</p>
+                <input type="text" id="playerNameInput" placeholder="Your Name" maxlength="20">
+                <button id="submitNameBtn">START</button>
+            </div>
+            
+            <div class="instructions" id="instructions" style="display: none;">
+                <h2>🏃‍♂️ NEON PARKOUR</h2>
+                <div class="controls-section">
+                    <p><strong>CONTROLS:</strong></p>
+                    <p>🏃 A/D or ←/→ - Move left/right</p>
+                    <p>🦘 W or ↑ - Jump</p>
+                    <p>🧗 Hold W near wall - Wall grab</p>
+                    <p>🚀 S or ↓ - Slide (while running)</p>
+                    <p>💨 Double-tap direction - Dash</p>
+                </div>
+                <div class="features-section">
+                    <p><strong>NEW FEATURES:</strong></p>
+                    <p>🔵 Jump Pads - Bounce higher!</p>
+                    <p>🌀 Portals - Teleport across levels!</p>
+                    <p>💰 Collect coins for bonus points!</p>
+                </div>
+                <div class="leaderboard" id="leaderboardList"></div>
                 <button id="startBtn">START GAME</button>
             </div>
             
@@ -34,6 +48,7 @@
                 <p>Score: <span id="finalScore"></span></p>
                 <button id="nextLevelBtn">Next Level</button>
                 <button id="restartBtn">Restart</button>
+                <button id="mainMenuBtn">Main Menu</button>
             </div>
         </div>
         

@@ -5,11 +5,13 @@ class ParkourGame {
         this.setupCanvas();
         
         // Game state
-        this.gameState = 'menu'; // menu, playing, paused, gameOver
+        this.gameState = 'nameEntry'; // nameEntry, menu, playing, paused, gameOver
         this.currentLevel = 1;
         this.score = 0;
         this.startTime = 0;
         this.gameTime = 0;
+        this.playerName = '';
+        this.leaderboard = this.loadLeaderboard();
         
         // Player properties
         this.player = {
@@ -42,6 +44,8 @@ class ParkourGame {
         this.platforms = [];
         this.hazards = [];
         this.collectibles = [];
+        this.jumpPads = [];
+        this.portals = [];
         this.exit = null;
         
         // Camera
@@ -75,12 +79,20 @@ class ParkourGame {
             this.startGame();
         });
         
+        document.getElementById('submitNameBtn').addEventListener('click', () => {
+            this.submitName();
+        });
+        
         document.getElementById('nextLevelBtn').addEventListener('click', () => {
             this.nextLevel();
         });
         
         document.getElementById('restartBtn').addEventListener('click', () => {
             this.restartLevel();
+        });
+        
+        document.getElementById('mainMenuBtn').addEventListener('click', () => {
+            this.returnToMenu();
         });
         
         // Window resize
@@ -107,6 +119,72 @@ class ParkourGame {
         this.startTime = Date.now();
         document.getElementById('instructions').style.display = 'none';
         this.resetPlayerPosition();
+    }
+    
+    submitName() {
+        const nameInput = document.getElementById('playerNameInput');
+        this.playerName = nameInput.value.trim() || 'Anonymous';
+        this.gameState = 'menu';
+        document.getElementById('nameEntry').style.display = 'none';
+        document.getElementById('instructions').style.display = 'block';
+        this.displayLeaderboard();
+    }
+    
+    returnToMenu() {
+        this.gameState = 'menu';
+        this.currentLevel = 1;
+        this.score = 0;
+        document.getElementById('gameOver').style.display = 'none';
+        document.getElementById('instructions').style.display = 'block';
+        this.generateLevel(this.currentLevel);
+        this.resetPlayerPosition();
+        this.displayLeaderboard();
+    }
+    
+    loadLeaderboard() {
+        const saved = localStorage.getItem('neonParkourLeaderboard');
+        return saved ? JSON.parse(saved) : [];
+    }
+    
+    saveLeaderboard() {
+        localStorage.setItem('neonParkourLeaderboard', JSON.stringify(this.leaderboard));
+    }
+    
+    updateLeaderboard() {
+        const entry = {
+            name: this.playerName,
+            level: this.currentLevel,
+            score: this.score,
+            time: this.gameTime
+        };
+        
+        this.leaderboard.push(entry);
+        this.leaderboard.sort((a, b) => {
+            if (a.level !== b.level) return b.level - a.level;
+            if (a.score !== b.score) return b.score - a.score;
+            return a.time - b.time;
+        });
+        
+        // Keep only top 5
+        this.leaderboard = this.leaderboard.slice(0, 5);
+        this.saveLeaderboard();
+    }
+    
+    displayLeaderboard() {
+        const leaderboardDiv = document.getElementById('leaderboardList');
+        if (this.leaderboard.length === 0) {
+            leaderboardDiv.innerHTML = '<p>No scores yet!</p>';
+            return;
+        }
+        
+        let html = '<h3>🏆 TOP 5 LEADERBOARD</h3>';
+        this.leaderboard.forEach((entry, index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+            html += `<div class="leaderboard-entry">
+                ${medal} ${entry.name} - Level ${entry.level} - ${entry.score} pts (${entry.time.toFixed(2)}s)
+            </div>`;
+        });
+        leaderboardDiv.innerHTML = html;
     }
     
     nextLevel() {
@@ -141,6 +219,8 @@ class ParkourGame {
         this.platforms = [];
         this.hazards = [];
         this.collectibles = [];
+        this.jumpPads = [];
+        this.portals = [];
         this.particles = [];
         
         // Basic ground platform
@@ -218,6 +298,44 @@ class ParkourGame {
             });
         }
         
+        // Add jump pads
+        for (let i = 0; i < Math.floor(complexity / 2) + 1; i++) {
+            const x = 400 + i * 300 + Math.random() * 100;
+            const y = 500;
+            
+            this.jumpPads.push({
+                x, y, width: 60, height: 20,
+                color: '#48dbfb', type: 'jumpPad',
+                power: 20 + Math.random() * 10,
+                animationOffset: Math.random() * Math.PI * 2
+            });
+        }
+        
+        // Add portals (pairs)
+        if (level > 2) {
+            for (let i = 0; i < Math.floor(complexity / 3); i++) {
+                const portal1 = {
+                    x: 300 + i * 400,
+                    y: 200 + Math.random() * 200,
+                    width: 30, height: 50,
+                    color: '#ff9ff3', type: 'portal',
+                    id: i, animationOffset: 0,
+                    targetId: i + 1000 // Will link to corresponding portal
+                };
+                
+                const portal2 = {
+                    x: 600 + i * 400,
+                    y: 200 + Math.random() * 200,
+                    width: 30, height: 50,
+                    color: '#54a0ff', type: 'portal',
+                    id: i + 1000, animationOffset: Math.PI,
+                    targetId: i // Link back to first portal
+                };
+                
+                this.portals.push(portal1, portal2);
+            }
+        }
+        
         // Set exit portal
         const lastPlatform = this.platforms[this.platforms.length - 1];
         this.exit = {
@@ -248,6 +366,12 @@ class ParkourGame {
         
         // Check collectibles
         this.checkCollectibles();
+        
+        // Check jump pads
+        this.checkJumpPads();
+        
+        // Check portals
+        this.checkPortals();
         
         // Check exit
         this.checkExit();
@@ -443,6 +567,53 @@ class ParkourGame {
         }
     }
     
+    checkJumpPads() {
+        const player = this.player;
+        
+        for (let jumpPad of this.jumpPads) {
+            if (player.x < jumpPad.x + jumpPad.width &&
+                player.x + player.width > jumpPad.x &&
+                player.y < jumpPad.y + jumpPad.height &&
+                player.y + player.height > jumpPad.y &&
+                player.vy >= 0) { // Only trigger when falling/landing
+                
+                player.vy = -jumpPad.power;
+                player.onGround = false;
+                this.createJumpPadParticles(jumpPad.x + jumpPad.width / 2, jumpPad.y);
+                this.score += 50; // Bonus points for using jump pad
+            }
+        }
+    }
+    
+    checkPortals() {
+        const player = this.player;
+        
+        for (let portal of this.portals) {
+            if (player.x < portal.x + portal.width &&
+                player.x + player.width > portal.x &&
+                player.y < portal.y + portal.height &&
+                player.y + player.height > portal.y) {
+                
+                // Find the target portal
+                const targetPortal = this.portals.find(p => p.id === portal.targetId);
+                if (targetPortal && !player.teleporting) {
+                    player.x = targetPortal.x + targetPortal.width / 2 - player.width / 2;
+                    player.y = targetPortal.y + targetPortal.height / 2 - player.height / 2;
+                    player.teleporting = true;
+                    this.createPortalParticles(portal.x + portal.width / 2, portal.y + portal.height / 2);
+                    this.createPortalParticles(targetPortal.x + targetPortal.width / 2, targetPortal.y + targetPortal.height / 2);
+                    this.score += 200; // Bonus points for using portal
+                    
+                    // Prevent immediate re-teleportation
+                    setTimeout(() => {
+                        player.teleporting = false;
+                    }, 1000);
+                }
+                break;
+            }
+        }
+    }
+    
     checkExit() {
         const player = this.player;
         
@@ -461,6 +632,9 @@ class ParkourGame {
         this.gameState = 'gameOver';
         const timeBonus = Math.max(0, 1000 - Math.floor(this.gameTime * 10));
         this.score += timeBonus;
+        
+        // Update leaderboard
+        this.updateLeaderboard();
         
         document.getElementById('finalTime').textContent = this.gameTime.toFixed(2);
         document.getElementById('finalScore').textContent = this.score;
@@ -623,6 +797,39 @@ class ParkourGame {
         }
     }
     
+    createJumpPadParticles(x, y) {
+        for (let i = 0; i < 15; i++) {
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: -Math.random() * 8 - 5,
+                size: 3 + Math.random() * 4,
+                color: '#48dbfb',
+                life: 40,
+                maxLife: 40,
+                alpha: 1
+            });
+        }
+    }
+    
+    createPortalParticles(x, y) {
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * 5,
+                vy: Math.sin(angle) * 5,
+                size: 2 + Math.random() * 3,
+                color: Math.random() > 0.5 ? '#ff9ff3' : '#54a0ff',
+                life: 50,
+                maxLife: 50,
+                alpha: 1
+            });
+        }
+    }
+    
     updateUI() {
         document.getElementById('level').textContent = this.currentLevel;
         document.getElementById('timer').textContent = this.gameTime.toFixed(2);
@@ -646,6 +853,12 @@ class ParkourGame {
         
         // Render collectibles
         this.renderCollectibles();
+        
+        // Render jump pads
+        this.renderJumpPads();
+        
+        // Render portals
+        this.renderPortals();
         
         // Render exit
         this.renderExit();
@@ -717,6 +930,67 @@ class ParkourGame {
                 
                 this.ctx.restore();
             }
+        }
+    }
+    
+    renderJumpPads() {
+        const time = Date.now() * 0.01;
+        
+        for (let jumpPad of this.jumpPads) {
+            const bounce = Math.sin(time + jumpPad.animationOffset) * 3;
+            
+            // Main jump pad
+            this.ctx.fillStyle = jumpPad.color;
+            this.ctx.shadowColor = jumpPad.color;
+            this.ctx.shadowBlur = 15;
+            this.ctx.fillRect(jumpPad.x, jumpPad.y + bounce, jumpPad.width, jumpPad.height);
+            this.ctx.shadowBlur = 0;
+            
+            // Arrow indicator
+            this.ctx.fillStyle = '#fff';
+            const arrowX = jumpPad.x + jumpPad.width / 2;
+            const arrowY = jumpPad.y + jumpPad.height / 2 + bounce;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(arrowX, arrowY - 8);
+            this.ctx.lineTo(arrowX - 6, arrowY + 2);
+            this.ctx.lineTo(arrowX + 6, arrowY + 2);
+            this.ctx.closePath();
+            this.ctx.fill();
+        }
+    }
+    
+    renderPortals() {
+        const time = Date.now() * 0.005;
+        
+        for (let portal of this.portals) {
+            portal.animationOffset += 0.1;
+            
+            // Portal swirl effect
+            this.ctx.save();
+            this.ctx.translate(portal.x + portal.width / 2, portal.y + portal.height / 2);
+            
+            // Main portal body
+            this.ctx.fillStyle = portal.color;
+            this.ctx.shadowColor = portal.color;
+            this.ctx.shadowBlur = 20;
+            this.ctx.fillRect(-portal.width / 2, -portal.height / 2, portal.width, portal.height);
+            this.ctx.shadowBlur = 0;
+            
+            // Swirling particles
+            for (let i = 0; i < 8; i++) {
+                const angle = (time + portal.animationOffset + i * Math.PI / 4) * 2;
+                const radius = 15 + Math.sin(time + i) * 5;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.sin(time + i) * 0.3})`;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            this.ctx.restore();
         }
     }
     
@@ -821,5 +1095,16 @@ class ParkourGame {
 
 // Start the game when page loads
 window.addEventListener('load', () => {
-    new ParkourGame();
+    const game = new ParkourGame();
+    
+    // Show name entry screen first
+    document.getElementById('nameEntry').style.display = 'block';
+    document.getElementById('instructions').style.display = 'none';
+    
+    // Handle Enter key for name input
+    document.getElementById('playerNameInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            game.submitName();
+        }
+    });
 });

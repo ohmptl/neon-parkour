@@ -59,7 +59,7 @@ body {
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
 }
 
-.instructions, .game-over {
+.instructions, .game-over, .name-entry {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -74,7 +74,7 @@ body {
     max-width: 500px;
 }
 
-.instructions h2, .game-over h2 {
+.instructions h2, .game-over h2, .name-entry h2 {
     color: #00ffff;
     font-size: 28px;
     margin-bottom: 20px;
@@ -118,6 +118,64 @@ button:active {
     transform: translateY(0);
 }
 
+/* Name input styling */
+#playerNameInput {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    color: #fff;
+    font-size: 18px;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    width: 100%;
+    max-width: 300px;
+}
+
+#playerNameInput:focus {
+    outline: none;
+    border-color: #40a0ff;
+    box-shadow: 0 0 15px rgba(64, 160, 255, 0.5);
+}
+
+/* Leaderboard styling */
+.leaderboard {
+    margin: 20px 0;
+    text-align: left;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #00ffff;
+}
+
+.leaderboard h3 {
+    color: #00ffff;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.leaderboard-entry {
+    margin: 8px 0;
+    padding: 5px;
+    background: rgba(0, 255, 255, 0.1);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Sections styling */
+.controls-section, .features-section {
+    margin: 15px 0;
+    padding: 10px;
+    background: rgba(0, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.features-section {
+    background: rgba(255, 159, 243, 0.05);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .top-ui {
@@ -131,17 +189,22 @@ button:active {
         padding: 8px 12px;
     }
     
-    .instructions, .game-over {
+    .instructions, .game-over, .name-entry {
         padding: 20px;
         max-width: 90vw;
     }
     
-    .instructions h2, .game-over h2 {
+    .instructions h2, .game-over h2, .name-entry h2 {
         font-size: 24px;
     }
     
     .instructions p {
         font-size: 14px;
+    }
+    
+    #playerNameInput {
+        font-size: 16px;
+        padding: 10px 12px;
     }
 }
 
